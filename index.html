@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Admin panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    :root {
+        --primary-glow: #00f2ff;
+        --bg-deep: #03050c;
+        --card-rgb: rgba(6, 12, 28, 0.92);
+        --rgb-speed: 4s;
+        --accent-neon: #0ff;
+        --danger-neon: #ff3366;
+        --success-neon: #0feb8e;
+    }
+
+    @keyframes rgb-border-shift {
+        0% { border-color: #ff0040; box-shadow: 0 0 8px #ff0040, inset 0 0 4px #ff0040; }
+        25% { border-color: #f0f; box-shadow: 0 0 12px #f0f, inset 0 0 4px #f0f; }
+        50% { border-color: #0ff; box-shadow: 0 0 12px #0ff, inset 0 0 4px #0ff; }
+        75% { border-color: #00ffaa; box-shadow: 0 0 8px #00ffaa, inset 0 0 4px #00ffaa; }
+        100% { border-color: #ff0040; box-shadow: 0 0 8px #ff0040, inset 0 0 4px #ff0040; }
+    }
+
+    @keyframes rgb-text-wave {
+        0% { color: #ff3366; text-shadow: 0 0 3px #ff3366; }
+        33% { color: #00ffff; text-shadow: 0 0 6px #00ffff; }
+        66% { color: #b800ff; text-shadow: 0 0 5px #b800ff; }
+        100% { color: #ff3366; text-shadow: 0 0 3px #ff3366; }
+    }
+
+    @keyframes scanline {
+        0% { transform: translateY(-100%); opacity: 0.8; }
+        100% { transform: translateY(1000%); opacity: 0; }
+    }
+
+    body {
+        background: var(--bg-deep);
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 500;
+        color: #eef5ff;
+        background-image: radial-gradient(circle at 20% 30%, rgba(0, 180, 255, 0.08) 0%, #03050c 90%);
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    .container {
+        max-width: 1300px;
+        margin: 0 auto;
+        animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(15px);}
+        to { opacity: 1; transform: translateY(0);}
+    }
+
+    /* main title */
+    .cyber-title {
+        font-family: 'Orbitron', monospace;
+        font-size: 2.7rem;
+        text-align: center;
+        margin-bottom: 35px;
+        letter-spacing: 4px;
+        word-break: keep-all;
+        animation: rgb-text-wave var(--rgb-speed) infinite ease;
+        background: linear-gradient(135deg, #ffffff20 0%, transparent 80%);
+        display: inline-block;
+        width: 100%;
+        padding: 10px 0;
+        border-bottom: 2px solid rgba(0, 255, 255, 0.4);
+    }
+
+    /* card rgb morph */
+    .rgb-card {
+        background: var(--card-rgb);
+        backdrop-filter: blur(10px);
+        border-width: 2px;
+        border-style: solid;
+        border-radius: 28px 8px 28px 8px;
+        padding: 24px 28px;
+        margin-bottom: 35px;
+        transition: all 0.25s;
+        animation: rgb-border-shift var(--rgb-speed) infinite alternate;
+        position: relative;
+    }
+
+    .rgb-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #0ff, #f0f, #0ff, transparent);
+        animation: scanline 3s linear infinite;
+        pointer-events: none;
+        border-radius: 4px;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-left: 5px solid var(--primary-glow);
+        padding-left: 16px;
+        margin-bottom: 22px;
+    }
+
+    .card-header h2 {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 800;
+        font-size: 1.5rem;
+        letter-spacing: 1px;
+        background: linear-gradient(135deg, #fff, #0ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin: 0;
+    }
+
+    .led-pulse {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #0ff;
+        box-shadow: 0 0 8px cyan;
+        animation: ledPulse 0.9s infinite alternate;
+    }
+
+    @keyframes ledPulse {
+        0% { opacity: 0.4; transform: scale(0.8);}
+        100% { opacity: 1; transform: scale(1.2); background: #ff00cc; box-shadow: 0 0 12px magenta;}
+    }
+
+    .dual-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 25px;
+        justify-content: flex-start;
+    }
+
+    .cyber-btn {
+        font-family: 'Orbitron', monospace;
+        font-weight: 800;
+        background: rgba(0, 0, 0, 0.65);
+        border: 2px solid cyan;
+        padding: 12px 34px;
+        font-size: 1.2rem;
+        border-radius: 60px;
+        cursor: pointer;
+        backdrop-filter: blur(4px);
+        transition: 0.2s;
+        letter-spacing: 1.5px;
+        color: cyan;
+        box-shadow: 0 0 6px cyan;
+    }
+
+    .cyber-btn:active {
+        transform: scale(0.96);
+    }
+
+    /* form area */
+    .key-creator {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-end;
+    }
+
+    .input-glow {
+        background: #0a0f1c;
+        border: 1.5px solid cyan;
+        padding: 12px 18px;
+        border-radius: 14px;
+        font-size: 1rem;
+        font-family: 'Rajdhani', monospace;
+        font-weight: 600;
+        color: #fff;
+        transition: 0.2s;
+        width: 260px;
+    }
+
+    .input-glow:focus {
+        outline: none;
+        border-color: #ff44dd;
+        box-shadow: 0 0 12px #ff44dd;
+    }
+
+    select.input-glow {
+        cursor: pointer;
+        background: #0b1120;
+    }
+
+    .btn-neon {
+        background: linear-gradient(95deg, #00ccff, #0066cc);
+        border: none;
+        font-family: 'Orbitron', monospace;
+        font-weight: bold;
+        padding: 12px 28px;
+        border-radius: 40px;
+        color: #000;
+        font-size: 1rem;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: 0.25s;
+        box-shadow: 0 0 12px #00a6ff;
+    }
+
+    .btn-neon:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 22px cyan;
+        background: linear-gradient(95deg, #0ff, #0088ff);
+        color: white;
+    }
+
+    /* table futuristic */
+    .glass-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Rajdhani', monospace;
+        font-weight: 600;
+    }
+
+    .glass-table th {
+        text-align: center;
+        padding: 16px 10px;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.85rem;
+        letter-spacing: 1.5px;
+        background: rgba(0, 255, 255, 0.1);
+        border-bottom: 2px solid cyan;
+        color: #b3f0ff;
+    }
+
+    .glass-table td {
+        padding: 14px 8px;
+        text-align: center;
+        background: rgba(5, 12, 25, 0.7);
+        border-bottom: 1px dashed rgba(0, 255, 255, 0.3);
+        backdrop-filter: blur(2px);
+    }
+
+    .glass-table tr:hover td {
+        background: rgba(0, 180, 200, 0.2);
+    }
+
+    .badge-active {
+        background: #0feb8e20;
+        color: #0feb8e;
+        padding: 5px 12px;
+        border-radius: 30px;
+        font-weight: bold;
+        border: 1px solid #0feb8e;
+        display: inline-block;
+    }
+
+    .badge-inactive {
+        background: #ff336620;
+        color: #ff667f;
+        padding: 5px 12px;
+        border-radius: 30px;
+        border: 1px solid #ff667f;
+    }
+
+    .action-group {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .mini-btn {
+        font-family: 'Orbitron', monospace;
+        font-weight: bold;
+        padding: 6px 14px;
+        border-radius: 40px;
+        border: none;
+        cursor: pointer;
+        transition: 0.15s;
+        font-size: 0.75rem;
+    }
+
+    .btn-enable {
+        background: #1a8c4b;
+        color: white;
+        box-shadow: 0 0 5px #2ed573;
+    }
+
+    .btn-disable {
+        background: #a1222f;
+        color: white;
+        box-shadow: 0 0 5px #ff4757;
+    }
+
+    .btn-del {
+        background: #7a0c2e;
+        color: #ffb3c6;
+        border: 1px solid #ff3366;
+    }
+
+    .btn-del:hover {
+        background: #e6003b;
+        color: white;
+    }
+
+    .scrollable {
+        overflow-x: auto;
+        margin-top: 15px;
+    }
+
+    @media (max-width: 720px) {
+        .cyber-title { font-size: 1.8rem; }
+        .rgb-card { padding: 16px; }
+        .card-header h2 { font-size: 1.2rem; }
+        .cyber-btn { padding: 8px 18px; font-size: 1rem; }
+    }
+
+    /* status animation */
+    .glowing-text {
+        text-shadow: 0 0 3px currentColor;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="cyber-title">
+        ADMIN PANEL
+        <div style="font-size: 0.7rem; letter-spacing: 6px;">// ADMIN ACCESS NEXUS //</div>
+    </div>
+
+    <!-- Server / Game Toggle Card -->
+    <div class="rgb-card">
+        <div class="card-header">
+            <span class="led-pulse"></span>
+            <h2>⚙️ CORE COMMAND CENTER</h2>
+        </div>
+        <div class="dual-buttons">
+            <button id="serverToggleBtn" class="cyber-btn">⟳ SERVER</button>
+            <button id="gameToggleBtn" class="cyber-btn">🎮 GAME ENGINE</button>
+        </div>
+        <div style="margin-top: 18px; font-size: 0.8rem; opacity: 0.7;">
+            <span>🔒 real-time status | rgb encrypted handshake</span>
+        </div>
+    </div>
+
+    <!-- Create Access Key -->
+    <div class="rgb-card">
+        <div class="card-header">
+            <span class="led-pulse" style="background: #ff44dd; box-shadow: 0 0 12px #ff44dd;"></span>
+            <h2>🔑 GENERATE VIP ACCESS KEY</h2>
+        </div>
+        <div class="key-creator">
+            <input type="text" id="accessPassword" class="input-glow" placeholder="Enter unique password / code" autocomplete="off">
+            <select id="validityDays" class="input-glow">
+                <option value="1">1 Day — Temporary</option>
+                <option value="3">3 Days — Standard</option>
+                <option value="7" selected>7 Days — Weekly VIP</option>
+                <option value="30">30 Days — Monthly Legend</option>
+            </select>
+            <button id="generateKeyBtn" class="btn-neon">✨ GENERATE KEY</button>
+        </div>
+        <div style="font-size: 0.75rem; margin-top: 15px; opacity: 0.6; border-left: 3px solid cyan; padding-left: 12px;">
+            💡 Each generated key will appear in history table. Toggle active state or delete permanently.
+        </div>
+    </div>
+
+    <!-- Database History with full control -->
+    <div class="rgb-card">
+        <div class="card-header">
+            <span class="led-pulse" style="animation-duration: 0.7s;"></span>
+            <h2>📜 ACCESS KEY DATABASE (REAL-TIME)</h2>
+        </div>
+        <div class="scrollable">
+            <table class="glass-table" id="vipTable">
+                <thead>
+                    <tr>
+                        <th>🔐 PASSWORD</th>
+                        <th>⏳ VALIDITY</th>
+                        <th>📅 CREATED</th>
+                        <th>🟢 STATUS</th>
+                        <th>⚡ ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" style="text-align:center;">⟳ synchronizing with secure node...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // *********************************************
+    // NEW FIREBASE CONFIGURATION (sonjit1-d921d)
+    // *********************************************
+    const firebaseConfig = {
+        apiKey: "AIzaSyC4oFNj2z_H1MU-ksf4A2RUQ77xRfYn1Wo",
+        authDomain: "sonjit1-d921d.firebaseapp.com",
+        databaseURL: "https://sonjit1-d921d-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "sonjit1-d921d",
+        storageBucket: "sonjit1-d921d.firebasestorage.app",
+        messagingSenderId: "725826790557",
+        appId: "1:725826790557:web:958e354500c2279a30e074",
+        measurementId: "G-0YTQ22YX7D"
+    };
+
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    } else {
+        firebase.app(); // use existing
+    }
+    const database = firebase.database();
+
+    // DOM elements
+    const serverBtn = document.getElementById('serverToggleBtn');
+    const gameBtn = document.getElementById('gameToggleBtn');
+    const generateBtn = document.getElementById('generateKeyBtn');
+    const passInput = document.getElementById('accessPassword');
+    const daysSelect = document.getElementById('validityDays');
+    const tbody = document.getElementById('tableBody');
+
+    // ---------- Helper: update server/game UI with animation style ----------
+    function updateServerUI(isActive) {
+        if (isActive) {
+            serverBtn.textContent = "🟢 SERVER: ONLINE";
+            serverBtn.style.borderColor = "#0feb8e";
+            serverBtn.style.color = "#aaffdd";
+            serverBtn.style.boxShadow = "0 0 12px #0feb8e";
+        } else {
+            serverBtn.textContent = "🔴 SERVER: OFFLINE";
+            serverBtn.style.borderColor = "#ff4757";
+            serverBtn.style.color = "#ff8a9f";
+            serverBtn.style.boxShadow = "0 0 6px #ff3366";
+        }
+    }
+
+    function updateGameUI(isActive) {
+        if (isActive) {
+            gameBtn.textContent = "🎮 GAME: ACTIVE";
+            gameBtn.style.borderColor = "#0feb8e";
+            gameBtn.style.color = "#aaffdd";
+            gameBtn.style.boxShadow = "0 0 12px #0feb8e";
+        } else {
+            gameBtn.textContent = "💀 GAME: INACTIVE";
+            gameBtn.style.borderColor = "#ff4757";
+            gameBtn.style.color = "#ff8a9f";
+            gameBtn.style.boxShadow = "0 0 6px #ff3366";
+        }
+    }
+
+    // Toggle generic node (server/game)
+    function toggleNode(nodeName) {
+        const nodeRef = database.ref(nodeName);
+        nodeRef.once('value')
+            .then((snapshot) => {
+                let current = snapshot.val();
+                if (current === null || current === undefined) current = false;
+                const newState = !current;
+                return nodeRef.set(newState);
+            })
+            .catch(err => {
+                console.error("Toggle error:", err);
+                alert("⚠️ Failed to toggle status. Check connectivity.");
+            });
+    }
+
+    // Attach realtime listeners for server and game
+    database.ref('server').on('value', (snap) => {
+        let status = snap.val();
+        if (status === undefined || status === null) status = false;
+        updateServerUI(status === true);
+    });
+    database.ref('game').on('value', (snap) => {
+        let status = snap.val();
+        if (status === undefined || status === null) status = false;
+        updateGameUI(status === true);
+    });
+
+    serverBtn.onclick = () => toggleNode('server');
+    gameBtn.onclick = () => toggleNode('game');
+
+    // ------------------- CREATE PASSWORD (Access Key) -------------------
+    function generateAccessKey() {
+        let rawPass = passInput.value.trim();
+        if (rawPass === "") {
+            alert("❌ Please enter a password/key for VIP access.");
+            return;
+        }
+        const days = parseInt(daysSelect.value);
+        if (isNaN(days) || days <= 0) {
+            alert("Invalid days selection.");
+            return;
+        }
+
+        const timestamp = Date.now();
+        const newRef = database.ref('passwords').push();
+        const newKeyData = {
+            password: rawPass,
+            day: days,
+            time: timestamp,
+            active: true
+        };
+        newRef.set(newKeyData)
+            .then(() => {
+                alert(`✅ Access Key "${rawPass}" created successfully! (${days} days validity)`);
+                passInput.value = '';
+                // no need to manually reload, realtime listener updates table.
+            })
+            .catch((error) => {
+                console.error("Firebase write error:", error);
+                alert("❌ Error: Could not save key. Check database permissions.");
+            });
+    }
+
+    generateBtn.addEventListener('click', generateAccessKey);
+
+    // ------------------- LOAD AND RENDER TABLE (REAL-TIME) -------------------
+    function renderPasswordTable(snapshot) {
+        const dataList = [];
+        snapshot.forEach(childSnapshot => {
+            const key = childSnapshot.key;
+            const val = childSnapshot.val();
+            if (val) {
+                dataList.push({ id: key, ...val });
+            }
+        });
+        // sort by creation time descending (newest first)
+        dataList.sort((a, b) => (b.time || 0) - (a.time || 0));
+
+        if (dataList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">🔍 No access keys found. Create one above.</td></tr>`;
+            return;
+        }
+
+        let html = '';
+        for (let item of dataList) {
+            const passwordStr = escapeHtml(item.password || 'N/A');
+            const dayVal = item.day !== undefined ? `${item.day} Days` : '—';
+            const createdDate = item.time ? new Date(item.time).toLocaleString() : 'Unknown';
+            const isActive = item.active === true;
+            const statusSpan = isActive ? '<span class="badge-active">● ACTIVE</span>' : '<span class="badge-inactive">○ INACTIVE</span>';
+            
+            // toggle button text & style
+            const toggleActionText = isActive ? 'DISABLE' : 'ENABLE';
+            const toggleBtnClass = isActive ? 'btn-disable' : 'btn-enable';
+            
+            html += `
+                <tr data-key="${item.id}">
+                    <td style="font-family: monospace; font-weight: bold; color: #0ff;">${passwordStr}</td>
+                    <td>${dayVal}</td>
+                    <td style="font-size:0.8rem;">${createdDate}</td>
+                    <td>${statusSpan}</td>
+                    <td>
+                        <div class="action-group">
+                            <button class="mini-btn ${toggleBtnClass}" data-action="toggle" data-id="${item.id}" data-current="${isActive}">${toggleActionText}</button>
+                            <button class="mini-btn btn-del" data-action="delete" data-id="${item.id}">🗑 DELETE</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        tbody.innerHTML = html;
+
+        // attach event listeners dynamically (better performance)
+        const toggleBtns = tbody.querySelectorAll('[data-action="toggle"]');
+        toggleBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const keyId = btn.getAttribute('data-id');
+                const currentState = btn.getAttribute('data-current') === 'true';
+                togglePasswordStatus(keyId, currentState);
+            });
+        });
+
+        const deleteBtns = tbody.querySelectorAll('[data-action="delete"]');
+        deleteBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const keyId = btn.getAttribute('data-id');
+                deletePasswordEntry(keyId);
+            });
+        });
+    }
+
+    function togglePasswordStatus(id, currentActive) {
+        const newState = !currentActive;
+        const statusText = newState ? "ENABLE" : "DISABLE";
+        database.ref(`passwords/${id}/active`).set(newState)
+            .then(() => {
+                // visual feedback handled by realtime update
+                console.log(`Key ${id} status changed to ${newState}`);
+            })
+            .catch(err => {
+                alert(`Failed to ${statusText.toLowerCase()} key: ${err.message}`);
+            });
+    }
+
+    function deletePasswordEntry(id) {
+        if (confirm("⚠️ PERMANENT ACTION: Delete this access key permanently? This cannot be undone.")) {
+            database.ref(`passwords/${id}`).remove()
+                .then(() => {
+                    // realtime sync auto updates UI
+                })
+                .catch(err => {
+                    alert("Delete failed: " + err.message);
+                });
+        }
+    }
+
+    // Helper to prevent XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // Listen to passwords node with realtime updates
+    const passwordsRef = database.ref('passwords');
+    passwordsRef.on('value', (snapshot) => {
+        renderPasswordTable(snapshot);
+    }, (error) => {
+        console.error("Realtime read failed:", error);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ff667f;">⚠️ Firebase connection error. Check rules or network.</td></tr>`;
+    });
+
+    // Optional: set initial default values for server & game if not exist (to avoid null states)
+    function ensureDefaultNodes() {
+        database.ref('server').once('value').then(snap => {
+            if (snap.val() === null) database.ref('server').set(false);
+        });
+        database.ref('game').once('value').then(snap => {
+            if (snap.val() === null) database.ref('game').set(false);
+        });
+    }
+    ensureDefaultNodes();
+
+    // little console info
+    console.log("✅ BJ COMMUNITY VIP Admin Panel — Firebase Realtime DB Connected (sonjit1-d921d)");
+</script>
+</body>
+</html>
